@@ -1,0 +1,1328 @@
+<!DOCTYPE html>
+<html lang="cs" class="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+  <meta name="theme-color" content="#020617" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="Skok z místa" />
+  <meta name="description" content="Okamžité měření skoku dalekého z místa z jedné fotografie v RAM bez ukládání snímků." />
+
+  <title>Skok z místa • Měření výkonu</title>
+
+  <!-- Inline ikona aplikace (SVG data URL) -->
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'%3E%3Crect width='512' height='512' rx='112' fill='%23020617'/%3E%3Crect x='48' y='340' width='416' height='56' rx='12' fill='%23facc15'/%3E%3Cpath d='M360 150 L140 150 M195 105 L135 150 L195 195' stroke='%2310b981' stroke-width='28' stroke-linecap='round' stroke-linejoin='round' fill='none'/%3E%3Ccircle cx='330' cy='275' r='22' fill='%23f43f5e'/%3E%3Cline x1='330' y1='275' x2='330' y2='368' stroke='%23f43f5e' stroke-width='10' stroke-dasharray='12 10'/%3E%3C/svg%3E" />
+  <link rel="apple-touch-icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'%3E%3Crect width='512' height='512' rx='112' fill='%23020617'/%3E%3Crect x='48' y='340' width='416' height='56' rx='12' fill='%23facc15'/%3E%3Cpath d='M360 150 L140 150 M195 105 L135 150 L195 195' stroke='%2310b981' stroke-width='28' stroke-linecap='round' stroke-linejoin='round' fill='none'/%3E%3Ccircle cx='330' cy='275' r='22' fill='%23f43f5e'/%3E%3Cline x1='330' y1='275' x2='330' y2='368' stroke='%23f43f5e' stroke-width='10' stroke-dasharray='12 10'/%3E%3C/svg%3E" />
+
+  <!-- Inline PWA Web App Manifest -->
+  <link rel="manifest" href='data:application/manifest+json;charset=utf-8,%7B%22name%22%3A%22Skok%20z%20m%C3%ADsta%20%E2%80%93%20M%C4%9B%C5%99en%C3%AD%20v%C3%BDkonu%22%2C%22short_name%22%3A%22Skok%20z%20m%C3%ADsta%22%2C%22start_url%22%3A%22.%22%2C%22display%22%3A%22standalone%22%2C%22orientation%22%3A%22portrait%22%2C%22background_color%22%3A%22%23020617%22%2C%22theme_color%22%3A%22%23020617%22%2C%22lang%22%3A%22cs%22%2C%22icons%22%3A%5B%7B%22src%22%3A%22data%3Aimage%2Fsvg%2Bxml%2C%253Csvg%2520xmlns%3D%27http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%27%2520viewBox%3D%270%200%20512%20512%27%253E%253Crect%2520width%3D%27512%27%2520height%3D%27512%27%2520rx%3D%27112%27%2520fill%3D%27%2523020617%27%2F%253E%253Crect%2520x%3D%2748%27%2520y%3D%27340%27%2520width%3D%27416%27%2520height%3D%2756%27%2520rx%3D%2712%27%2520fill%3D%27%2523facc15%27%2F%253E%253Cpath%2520d%3D%27M360%20150%20L140%20150%20M195%20105%20L135%20150%20L195%20195%27%2520stroke%3D%27%252310b981%27%2520stroke-width%3D%2728%27%2520stroke-linecap%3D%27round%27%2520stroke-linejoin%3D%27round%27%2520fill%3D%27none%27%2F%253E%253Ccircle%2520cx%3D%27330%27%2520cy%3D%27275%27%2520r%3D%2722%27%2520fill%3D%27%2523f43f5e%27%2F%253E%253C%2Fsvg%253E%22%2C%22sizes%22%3A%22512x512%22%2C%22type%22%3A%22image%2Fsvg%2Bxml%22%7D%5D%7D' />
+
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+
+  <!-- Google Fonts: Inter & JetBrains Mono -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800;900&family=JetBrains+Mono:wght@600;700;800&display=swap" rel="stylesheet" />
+
+  <!-- Tesseract.js (OCR čtení čísel z metru) -->
+  <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js" defer></script>
+
+  <style>
+    * {
+      -webkit-tap-highlight-color: transparent;
+      box-sizing: border-box;
+    }
+    html, body {
+      height: 100dvh;
+      width: 100%;
+      margin: 0;
+      padding: 0;
+      overflow: hidden;
+      background-color: #020617;
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      overscroll-behavior: none;
+    }
+    .font-mono-num {
+      font-family: 'JetBrains Mono', monospace;
+      font-variant-numeric: tabular-nums;
+    }
+    /* Skenovací animace při vyhodnocování snímku v RAM */
+    @keyframes scanline {
+      0% { transform: translateY(0%); opacity: 0.2; }
+      50% { opacity: 0.95; }
+      100% { transform: translateY(100%); opacity: 0.2; }
+    }
+    .animate-scan {
+      animation: scanline 1.1s ease-in-out infinite alternate;
+    }
+    /* Pulzující terčík dopadu */
+    @keyframes pulseRing {
+      0% { transform: scale(0.85); opacity: 0.9; }
+      100% { transform: scale(1.75); opacity: 0; }
+    }
+    .pulse-ring {
+      animation: pulseRing 1.4s cubic-bezier(0.22, 1, 0.36, 1) infinite;
+    }
+  </style>
+</head>
+<body class="bg-slate-950 text-slate-100 flex flex-col h-[100dvh] w-full select-none">
+
+  <!-- HORNÍ TENKÁ STAVOVÁ LIŠTA -->
+  <header class="shrink-0 h-12 px-3.5 bg-slate-950/95 border-b border-slate-800/90 flex items-center justify-between gap-2 z-20">
+    <div class="flex items-center gap-2 min-w-0">
+      <span class="w-2.5 h-2.5 rounded-full bg-emerald-400 shadow-[0_0_8px_#34d399] shrink-0"></span>
+      <h1 class="text-sm font-extrabold tracking-tight text-white truncate">Skok z místa</h1>
+    </div>
+
+    <div class="flex items-center gap-1.5 shrink-0">
+      <!-- Indikátor zpracování pouze v RAM -->
+      <span id="ramBadge" class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-semibold bg-emerald-950/80 text-emerald-300 border border-emerald-700/50">
+        <svg class="w-3 h-3 text-emerald-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+        </svg>
+        <span>Pouze RAM</span>
+      </span>
+
+      <!-- Stav náklonu telefonu -->
+      <span id="tiltBadge" class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-mono-num font-semibold bg-slate-900 text-slate-300 border border-slate-700/70">
+        <span>Náklon: --°</span>
+      </span>
+    </div>
+  </header>
+
+  <!-- HLAVNÍ PLOCHA: ŽIVÁ KAMERA NEBO VYHODNOCENÝ SNÍMEK -->
+  <main class="relative flex-1 w-full overflow-hidden bg-black flex flex-col">
+
+    <!-- 1. ŽIVÝ NÁHLED KAMERY -->
+    <div id="cameraView" class="relative flex-1 w-full h-full overflow-hidden bg-slate-950 flex items-center justify-center">
+      <!-- Video stream zadní kamery -->
+      <video id="cameraVideo" class="w-full h-full object-cover" autoplay playsinline muted></video>
+
+      <!-- Záložní živé plátno pro testovací scénu (pokud zařízení nemá kameru) -->
+      <canvas id="simPreviewCanvas" class="hidden w-full h-full object-cover"></canvas>
+
+      <!-- Jemné vizuální vodítko směru skoku a zóny metru -->
+      <div id="hudGuides" class="pointer-events-none absolute inset-0 flex flex-col justify-between p-3.5">
+        <!-- Horní šipka směru skoku (odraz vpravo -> dopad směrem doleva) -->
+        <div class="flex items-center justify-between gap-2">
+          <div class="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-slate-950/75 backdrop-blur-md border border-slate-700/70 shadow-lg">
+            <svg class="w-4 h-4 text-emerald-400 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.75">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M19 12H5m0 0l6 6m-6-6l6-6" />
+            </svg>
+            <span class="text-xs font-bold tracking-wide text-slate-100">Směr skoku (odraz vpravo)</span>
+          </div>
+
+          <!-- Status AI/OCR připravenosti -->
+          <span id="engineStatusPill" class="px-2.5 py-1 rounded-full text-[11px] font-semibold bg-slate-950/75 backdrop-blur-md text-slate-300 border border-slate-700/70">
+            Připravuji AI...
+          </span>
+        </div>
+
+        <!-- Středové vodítko pravé hrany (nejbližší bod k odrazu) -->
+        <div class="my-auto flex items-center justify-end pr-1 opacity-75">
+          <div class="flex items-center gap-1.5 px-2 py-1 rounded-lg bg-slate-950/60 border border-rose-500/40 text-[10px] font-semibold text-rose-300">
+            <span>Odraz (0 cm)</span>
+            <span>→</span>
+          </div>
+        </div>
+
+        <!-- Spodní vodící pás pro položený metr -->
+        <div class="w-full mb-1">
+          <div class="w-full h-14 rounded-xl border-2 border-dashed border-amber-400/55 bg-amber-400/5 flex items-center justify-between px-3">
+            <span class="text-[11px] font-semibold text-amber-300/90">← Vyšší čísla (např. 230)</span>
+            <span class="text-[11px] font-bold uppercase tracking-wider text-amber-200/90 bg-slate-950/70 px-2 py-0.5 rounded">Zóna metru</span>
+            <span class="text-[11px] font-semibold text-amber-300/90">Nižší (170) →</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Chybová / fallback karta, pokud kamera není dostupná -->
+      <div id="cameraFallbackCard" class="hidden absolute inset-0 bg-slate-950/92 backdrop-blur-md p-6 flex flex-col items-center justify-center text-center z-10">
+        <div class="w-14 h-14 rounded-2xl bg-amber-500/15 border border-amber-500/40 flex items-center justify-center mb-4">
+          <svg class="w-7 h-7 text-amber-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
+          </svg>
+        </div>
+        <h2 class="text-lg font-extrabold text-white mb-1.5">Kamera není k dispozici</h2>
+        <p id="cameraErrorText" class="text-xs text-slate-300 max-w-xs leading-relaxed mb-5">
+          Prohlížeč nepovolil přístup k zadní kameře nebo zařízení kameru nemá. Můžete okamžitě vyzkoušet celý algoritmus na testovacím snímku z tělocvičny.
+        </p>
+        <button id="enableSimModeBtn" type="button" class="px-5 py-3 rounded-xl bg-amber-400 hover:bg-amber-300 active:scale-[0.98] text-slate-950 font-extrabold text-sm transition shadow-lg">
+          Spustit testovací scénu (tělocvična)
+        </button>
+      </div>
+    </div>
+
+    <!-- 2. PŘEKRYV BĚHEM ZPRACOVÁNÍ V RAM -->
+    <div id="processingOverlay" class="hidden absolute inset-0 bg-slate-950/90 backdrop-blur-md z-30 flex flex-col items-center justify-center p-6 text-center">
+      <div class="relative w-20 h-20 rounded-2xl bg-emerald-500/10 border border-emerald-400/40 flex items-center justify-center mb-5 overflow-hidden">
+        <svg class="w-9 h-9 text-emerald-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+        </svg>
+        <div class="absolute inset-x-0 top-0 h-1 bg-emerald-400 shadow-[0_0_12px_#34d399] animate-scan"></div>
+      </div>
+      <p id="processingStepText" class="text-base font-extrabold text-white mb-1">Zachycuji snímek do RAM...</p>
+      <p class="text-xs text-slate-400">Fotografie se neukládá na disk ani do galerie</p>
+    </div>
+
+    <!-- 3. OBRAZOVKA VÝSLEDKU (ZOBRAZÍ VYHODNOCENÝ SNÍMEK Z RAM + HODNOTU) -->
+    <div id="resultView" class="hidden flex-1 w-full h-full flex flex-col bg-slate-950 overflow-hidden">
+      <!-- Plátno s vykreslenou analýzou (přímka metru, zelené referenční body, červená kolmice dopadu) -->
+      <div class="relative flex-1 w-full bg-black flex items-center justify-center overflow-hidden">
+        <canvas id="resultCanvas" class="max-w-full max-h-full object-contain"></canvas>
+
+        <!-- Štítek potvrzující dočasné uložení jen v RAM -->
+        <div class="absolute top-3 left-3 px-2.5 py-1 rounded-full bg-slate-950/80 backdrop-blur-md border border-rose-500/40 text-[11px] font-semibold text-rose-200 flex items-center gap-1.5">
+          <span class="w-2 h-2 rounded-full bg-rose-500 animate-pulse"></span>
+          <span>Dočasný náhled v RAM (bude smazán)</span>
+        </div>
+      </div>
+
+      <!-- Přehledná výsledková karta -->
+      <div class="shrink-0 bg-slate-900/95 border-t border-slate-800 px-4 pt-3 pb-2">
+        <div class="flex items-baseline justify-between gap-3">
+          <div>
+            <span class="text-[11px] font-bold uppercase tracking-wider text-slate-400 block">Naměřený výkon</span>
+            <div class="flex items-baseline gap-1.5">
+              <span id="scoreValueText" class="text-5xl font-black font-mono-num tracking-tight text-emerald-400">--</span>
+              <span class="text-xl font-extrabold text-emerald-300">cm</span>
+            </div>
+          </div>
+
+          <div class="text-right">
+            <span id="confidenceBadge" class="inline-block px-2.5 py-1 rounded-lg text-[11px] font-bold bg-emerald-500/15 text-emerald-300 border border-emerald-500/30">
+              OCR + Perspektiva
+            </span>
+            <p id="detailSubtext" class="text-[11px] text-slate-400 mt-1 font-mono-num">
+              Ref: -- cm • Náklon --°
+            </p>
+          </div>
+        </div>
+
+        <!-- Doplňující informační lišta (např. při odhadu ze sklonu) -->
+        <p id="fallbackNoticeText" class="hidden mt-2 text-[11px] text-amber-300 bg-amber-950/60 border border-amber-700/40 rounded-lg px-2.5 py-1.5 leading-snug"></p>
+      </div>
+    </div>
+
+    <!-- Informační toast zpráva (nahrazuje alert) -->
+    <div id="toastBanner" class="hidden pointer-events-none absolute bottom-4 inset-x-4 z-40 flex justify-center">
+      <div id="toastContent" class="px-4 py-2.5 rounded-xl bg-slate-900/95 border border-slate-700 text-xs font-bold text-slate-100 shadow-xl">
+        Snímek smazán z paměti
+      </div>
+    </div>
+  </main>
+
+  <!-- SPODNÍ AKČNÍ LIŠTA: V ZÁKLADNÍ OBRAZOVCE POUZE JEDNO TLAČÍTKO -->
+  <footer class="shrink-0 bg-slate-950 border-t border-slate-800/90 px-4 py-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] z-20">
+    <!-- Jediné tlačítko v základní obrazovce -->
+    <button id="measureBtn" type="button" class="w-full py-4 px-6 rounded-2xl bg-emerald-500 hover:bg-emerald-400 active:scale-[0.985] text-slate-950 font-black text-xl tracking-tight shadow-[0_0_24px_rgba(16,185,129,0.35)] transition flex items-center justify-center gap-3">
+      <svg class="w-6 h-6 stroke-[2.75]" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+        <circle cx="12" cy="12" r="3" />
+        <path stroke-linecap="round" stroke-linejoin="round" d="M3 9V6a1 1 0 011-1h3m10 0h3a1 1 0 011 1v3m0 6v3a1 1 0 01-1 1h-3M7 19H4a1 1 0 01-1-1v-3" />
+      </svg>
+      <span>Změřit výkon</span>
+    </button>
+
+    <!-- Tlačítko pro okamžité smazání snímku z RAM a návrat do hledáčku -->
+    <button id="resetDeleteBtn" type="button" class="hidden w-full py-4 px-6 rounded-2xl bg-rose-600 hover:bg-rose-500 active:scale-[0.985] text-white font-extrabold text-lg tracking-tight shadow-[0_0_24px_rgba(225,29,72,0.35)] transition flex items-center justify-center gap-2.5">
+      <svg class="w-5 h-5 stroke-[2.5]" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+      </svg>
+      <span>Smazat snímek a měřit dalšího</span>
+    </button>
+  </footer>
+
+  <!-- SKRYTÉ PRACOVNÍ PLÁTNO POUZE V OPERAČNÍ PAMĚTI (RAM) -->
+  <canvas id="ramWorkCanvas" class="hidden"></canvas>
+
+  <!-- HLAVNÍ APLIKAČNÍ LOGIKA -->
+  <script type="module">
+    /**
+     * PWA aplikace: Měření skoku dalekého z místa z jedné fotografie v RAM.
+     *
+     * Architektura zpracování:
+     * 1. Živý náhled zadní kamery (environment) v nejvyšším dostupném rozlišení.
+     * 2. Sběr náklonu mobilu přes DeviceOrientationEvent (včetně iOS requestPermission).
+     * 3. Zachycení 1 snímku do skrytého <canvas> v RAM (nikdy se neukládá na disk).
+     * 4. Detekce nejpravějšího bodu dopadu (směrem k odrazové čáře vpravo) pomocí
+     *    MediaPipe PoseLandmarker + lokální analýzy hrany podrážky boty.
+     * 5. Automatické čtení referenčních čísel z metru pomocí Tesseract.js OCR
+     *    a předzpracování pásky + perspektivní projekce korigovaná o sklon mobilu.
+     * 6. Okamžité vynulování paměti canvasu po kliknutí na „Smazat snímek a měřit dalšího“.
+     */
+
+    // =========================================================================
+    // 1. REFERENCE NA DOM ELEMENTY A STAV APLIKACE
+    // =========================================================================
+    const cameraView = document.getElementById('cameraView');
+    const cameraVideo = document.getElementById('cameraVideo');
+    const simPreviewCanvas = document.getElementById('simPreviewCanvas');
+    const cameraFallbackCard = document.getElementById('cameraFallbackCard');
+    const cameraErrorText = document.getElementById('cameraErrorText');
+    const enableSimModeBtn = document.getElementById('enableSimModeBtn');
+
+    const processingOverlay = document.getElementById('processingOverlay');
+    const processingStepText = document.getElementById('processingStepText');
+
+    const resultView = document.getElementById('resultView');
+    const resultCanvas = document.getElementById('resultCanvas');
+    const ramWorkCanvas = document.getElementById('ramWorkCanvas');
+
+    const measureBtn = document.getElementById('measureBtn');
+    const resetDeleteBtn = document.getElementById('resetDeleteBtn');
+
+    const tiltBadge = document.getElementById('tiltBadge');
+    const engineStatusPill = document.getElementById('engineStatusPill');
+    const scoreValueText = document.getElementById('scoreValueText');
+    const confidenceBadge = document.getElementById('confidenceBadge');
+    const detailSubtext = document.getElementById('detailSubtext');
+    const fallbackNoticeText = document.getElementById('fallbackNoticeText');
+    const toastBanner = document.getElementById('toastBanner');
+    const toastContent = document.getElementById('toastContent');
+
+    const appState = {
+      isSimMode: false,
+      simAnimId: null,
+      simTargetCm: 204,
+      mediaStream: null,
+      // Senzory náklonu telefonu (stupně)
+      orientation: {
+        beta: 48,      // Předozadní náklon z výšky pasu (výchozí odhad ~48° od vodorovné roviny)
+        gamma: 0,      // Boční náklon
+        hasLiveSensor: false
+      },
+      // AI & OCR enginy
+      poseLandmarker: null,
+      poseReady: false,
+      ocrWorker: null,
+      ocrReady: false,
+      isBusy: false
+    };
+
+    // =========================================================================
+    // 2. POMOCNÉ UI FUNKCE (BEZ ALERT / CONFIRM)
+    // =========================================================================
+    let toastTimer = null;
+    function showToast(message) {
+      toastContent.textContent = message;
+      toastBanner.classList.remove('hidden');
+      if (toastTimer) clearTimeout(toastTimer);
+      toastTimer = setTimeout(() => {
+        toastBanner.classList.add('hidden');
+      }, 2200);
+    }
+
+    function updateEngineStatus() {
+      if (appState.poseReady && appState.ocrReady) {
+        engineStatusPill.textContent = 'AI + OCR připraveno';
+        engineStatusPill.className = 'px-2.5 py-1 rounded-full text-[11px] font-semibold bg-emerald-950/85 backdrop-blur-md text-emerald-300 border border-emerald-700/60';
+      } else if (appState.poseReady || appState.ocrReady) {
+        engineStatusPill.textContent = 'AI připraveno (OCR načítám...)';
+      } else {
+        engineStatusPill.textContent = 'Připraveno k měření';
+      }
+    }
+
+    // =========================================================================
+    // 3. SENZORY NÁKLONU TELEFONU (DeviceOrientationEvent)
+    // =========================================================================
+    function handleDeviceOrientation(event) {
+      if (typeof event.beta === 'number' && !Number.isNaN(event.beta)) {
+        // Při držení mobilu na výšku a míření šikmo dolů na podlahu je beta typicky mezi 15° a 85°
+        // Převod na úhel pohledu dolů od horizontály:
+        const rawBeta = Math.abs(event.beta);
+        const pitchDown = Math.max(15, Math.min(85, 90 - rawBeta < 15 ? rawBeta : 90 - rawBeta));
+        appState.orientation.beta = Math.round(pitchDown * 10) / 10;
+        appState.orientation.gamma = typeof event.gamma === 'number' ? Math.round(event.gamma * 10) / 10 : 0;
+        appState.orientation.hasLiveSensor = true;
+        tiltBadge.textContent = `Náklon: ${Math.round(appState.orientation.beta)}°`;
+      }
+    }
+
+    function initOrientationPassive() {
+      if (typeof window !== 'undefined' && 'DeviceOrientationEvent' in window) {
+        if (typeof DeviceOrientationEvent.requestPermission !== 'function') {
+          window.addEventListener('deviceorientation', handleDeviceOrientation, { passive: true });
+        }
+      }
+    }
+
+    async function ensureOrientationPermissionOnClick() {
+      try {
+        if (typeof DeviceOrientationEvent !== 'undefined' &&
+            typeof DeviceOrientationEvent.requestPermission === 'function' &&
+            !appState.orientation.hasLiveSensor) {
+          const perm = await DeviceOrientationEvent.requestPermission();
+          if (perm === 'granted') {
+            window.addEventListener('deviceorientation', handleDeviceOrientation, { passive: true });
+          }
+        }
+      } catch (_err) {
+        // Pokud uživatel senzor nepovolí, použije se bezpečný výchozí náklon z výšky pasu (48°)
+      }
+    }
+
+    // =========================================================================
+    // 4. INICIALIZACE ZADNÍ KAMERY NEBO TESTOVACÍ SCÉNY Z TĚLOCVIČNY
+    // =========================================================================
+    async function startCamera() {
+      try {
+        if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+          throw new Error('Prohlížeč nepodporuje přístup ke kameře.');
+        }
+
+        const stream = await navigator.mediaDevices.getUserMedia({
+          audio: false,
+          video: {
+            facingMode: { ideal: 'environment' },
+            width: { ideal: 1920 },
+            height: { ideal: 1080 }
+          }
+        });
+
+        appState.mediaStream = stream;
+        cameraVideo.srcObject = stream;
+        await cameraVideo.play();
+        cameraFallbackCard.classList.add('hidden');
+        simPreviewCanvas.classList.add('hidden');
+        cameraVideo.classList.remove('hidden');
+      } catch (err) {
+        cameraErrorText.textContent = 'Zadní kamera není dostupná (' + (err.message || 'přístup odepřen') + '). Spusťte testovací scénu pro okamžité vyzkoušení měření.';
+        cameraFallbackCard.classList.remove('hidden');
+      }
+    }
+
+    /**
+     * Vykreslí realistickou scénu z tělocvičny (dřevěné parkety, žlutý metr s ostrými čísly
+     * od 240 vlevo po 170 vpravo a tenisku žáka po dopadu) pro otestování celého
+     * algoritmu bez fyzické kamery.
+     */
+    function renderSyntheticGymScene(canvas, targetCm = 204, timeSec = 0) {
+      const w = canvas.width;
+      const h = canvas.height;
+      const ctx = canvas.getContext('2d');
+
+      // 1. Podlaha tělocvičny (světlé bukové parkety s perspektivou)
+      const floorGrad = ctx.createLinearGradient(0, 0, 0, h);
+      floorGrad.addColorStop(0, '#8c6239');
+      floorGrad.addColorStop(0.5, '#a97949');
+      floorGrad.addColorStop(1, '#ba8854');
+      ctx.fillStyle = floorGrad;
+      ctx.fillRect(0, 0, w, h);
+
+      // Spáry parket se sbíhající se perspektivou
+      ctx.strokeStyle = 'rgba(65, 38, 16, 0.28)';
+      ctx.lineWidth = Math.max(1, w * 0.0015);
+      const cols = 12;
+      for (let i = -2; i <= cols + 2; i++) {
+        const topX = w * 0.5 + (i - cols / 2) * (w / cols) * 0.72;
+        const botX = w * 0.5 + (i - cols / 2) * (w / cols) * 1.15;
+        ctx.beginPath();
+        ctx.moveTo(topX, 0);
+        ctx.lineTo(botX, h);
+        ctx.stroke();
+      }
+      for (let r = 1; r < 10; r++) {
+        const y = (r / 10) * h;
+        ctx.beginPath();
+        ctx.moveTo(0, y);
+        ctx.lineTo(w, y);
+        ctx.stroke();
+      }
+
+      // 2. Pásmo (metr) v dolní třetině záběru (hodnoty rostou zprava doleva: 170 -> 240)
+      const tapeY = Math.round(h * 0.74);
+      const tapeH = Math.round(h * 0.095);
+      const leftMargin = Math.round(w * 0.06);
+      const rightMargin = Math.round(w * 0.94);
+      const tapeW = rightMargin - leftMargin;
+
+      // Stín pod metrem
+      ctx.fillStyle = 'rgba(0, 0, 0, 0.25)';
+      ctx.fillRect(leftMargin, tapeY + 4, tapeW, tapeH);
+
+      // Bílý/žlutý sklolaminátový metr s vysokým kontrastem pro OCR
+      ctx.fillStyle = '#fefce8';
+      ctx.fillRect(leftMargin, tapeY, tapeW, tapeH);
+      ctx.strokeStyle = '#1e293b';
+      ctx.lineWidth = 2;
+      ctx.strokeRect(leftMargin, tapeY, tapeW, tapeH);
+
+      // Rozsah metru v záběru: vpravo 170 cm, vlevo 240 cm (celkem 70 cm)
+      const minCm = 170;
+      const maxCm = 240;
+      const spanCm = maxCm - minCm;
+      const pxPerCm = tapeW / spanCm;
+
+      // Vykreslení centimetrových dílků a výrazných decimetrových čísel
+      for (let cm = minCm; cm <= maxCm; cm++) {
+        const x = rightMargin - (cm - minCm) * pxPerCm;
+        const isTen = cm % 10 === 0;
+        const isFive = cm % 5 === 0;
+
+        ctx.beginPath();
+        ctx.strokeStyle = isTen ? '#dc2626' : '#0f172a';
+        ctx.lineWidth = isTen ? 3 : 1.5;
+        const tickLen = isTen ? tapeH * 0.34 : isFive ? tapeH * 0.24 : tapeH * 0.14;
+        ctx.moveTo(x, tapeY);
+        ctx.lineTo(x, tapeY + tickLen);
+        ctx.stroke();
+
+        if (isTen) {
+          ctx.fillStyle = '#090d16';
+          ctx.font = `900 ${Math.round(tapeH * 0.52)}px "JetBrains Mono", monospace`;
+          ctx.textAlign = 'center';
+          ctx.textBaseline = 'middle';
+          ctx.fillText(String(cm), x, tapeY + tapeH * 0.66);
+        }
+      }
+
+      // 3. Žák po dopadu kousek nad metrem (nejpravější bod podrážky = targetCm)
+      const sway = Math.sin(timeSec * 3) * 1.5;
+      const heelX = rightMargin - (targetCm - minCm) * pxPerCm + sway;
+      const floorContactY = Math.round(h * 0.56);
+
+      // Stín pod botami
+      ctx.fillStyle = 'rgba(15, 23, 42, 0.32)';
+      ctx.beginPath();
+      ctx.ellipse(heelX - pxPerCm * 11, floorContactY + 4, pxPerCm * 14, h * 0.025, 0, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Lýtka a tepláky žáka (shora dolů ke kotníkům)
+      const legWidth = pxPerCm * 7.5;
+      // Zadní noha (pravá - blíže odrazu)
+      ctx.fillStyle = '#1e293b';
+      ctx.beginPath();
+      ctx.moveTo(heelX - legWidth * 0.9, h * 0.12);
+      ctx.lineTo(heelX - legWidth * 0.15, h * 0.12);
+      ctx.lineTo(heelX - pxPerCm * 0.8, floorContactY - h * 0.05);
+      ctx.lineTo(heelX - legWidth * 1.1, floorContactY - h * 0.05);
+      ctx.closePath();
+      ctx.fill();
+
+      // Přední noha (o pár cm více vlevo)
+      const frontOffset = pxPerCm * 4.5;
+      ctx.fillStyle = '#0f172a';
+      ctx.beginPath();
+      ctx.moveTo(heelX - frontOffset - legWidth * 0.9, h * 0.12);
+      ctx.lineTo(heelX - frontOffset - legWidth * 0.15, h * 0.12);
+      ctx.lineTo(heelX - frontOffset - pxPerCm * 0.8, floorContactY - h * 0.05);
+      ctx.lineTo(heelX - frontOffset - legWidth * 1.1, floorContactY - h * 0.05);
+      ctx.closePath();
+      ctx.fill();
+
+      // Sportovní teniska (nejzadnější/nejpravější bod podrážky přesně na heelX!)
+      const shoeLen = pxPerCm * 24;
+      const shoeH = h * 0.065;
+
+      // Svršek boty (tmavě modrá sportovní bota)
+      ctx.fillStyle = '#1d4ed8';
+      ctx.beginPath();
+      ctx.moveTo(heelX - pxPerCm * 0.4, floorContactY - shoeH * 0.25);
+      ctx.quadraticCurveTo(heelX + pxPerCm * 0.3, floorContactY - shoeH * 0.85, heelX - legWidth * 0.9, floorContactY - shoeH * 1.15);
+      ctx.lineTo(heelX - shoeLen * 0.65, floorContactY - shoeH * 0.72);
+      ctx.quadraticCurveTo(heelX - shoeLen, floorContactY - shoeH * 0.55, heelX - shoeLen, floorContactY - shoeH * 0.22);
+      ctx.lineTo(heelX - pxPerCm * 0.4, floorContactY - shoeH * 0.22);
+      ctx.closePath();
+      ctx.fill();
+
+      // Bílá podrážka (jasný kontrast vůči podlaze, zadní okraj přesně na heelX)
+      ctx.fillStyle = '#f8fafc';
+      ctx.beginPath();
+      ctx.roundRect(heelX - shoeLen, floorContactY - shoeH * 0.26, shoeLen, shoeH * 0.26, 4);
+      ctx.fill();
+      ctx.strokeStyle = '#0f172a';
+      ctx.lineWidth = 1.5;
+      ctx.stroke();
+    }
+
+    function activateSimulationMode() {
+      appState.isSimMode = true;
+      cameraFallbackCard.classList.add('hidden');
+      cameraVideo.classList.add('hidden');
+      simPreviewCanvas.classList.remove('hidden');
+
+      simPreviewCanvas.width = 1080;
+      simPreviewCanvas.height = 1440;
+      appState.orientation.beta = 46;
+      tiltBadge.textContent = 'Náklon: 46° (sim)';
+
+      const startTime = performance.now();
+      function loop(now) {
+        if (!appState.isSimMode) return;
+        renderSyntheticGymScene(simPreviewCanvas, appState.simTargetCm, (now - startTime) / 1000);
+        appState.simAnimId = requestAnimationFrame(loop);
+      }
+      appState.simAnimId = requestAnimationFrame(loop);
+      showToast('Testovací režim tělocvičny aktivní');
+    }
+
+    enableSimModeBtn.addEventListener('click', activateSimulationMode);
+
+    // =========================================================================
+    // 5. INICIALIZACE MEDIAPIPE POSE LANDMARKER & TESSERACT OCR NA POZADÍ
+    // =========================================================================
+    async function initAiEngines() {
+      // A) MediaPipe PoseLandmarker (detekce pat, špiček, kotníků a zápěstí)
+      try {
+        const vision = await import('https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.14/+esm');
+        const filesetResolver = await vision.FilesetResolver.forVisionTasks(
+          'https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.14/wasm'
+        );
+        appState.poseLandmarker = await vision.PoseLandmarker.createFromOptions(filesetResolver, {
+          baseOptions: {
+            modelAssetPath: 'https://storage.googleapis.com/mediapipe-models/pose_landmarker/pose_landmarker_lite/float16/1/pose_landmarker_lite.task',
+            delegate: 'GPU'
+          },
+          runningMode: 'IMAGE',
+          numPoses: 1,
+          minPoseDetectionConfidence: 0.45,
+          minPosePresenceConfidence: 0.45
+        });
+        appState.poseReady = true;
+        updateEngineStatus();
+      } catch (_err) {
+        // Záložní detekce obrysu podrážky zůstává plně funkční i bez stažení modelu
+        appState.poseReady = false;
+        updateEngineStatus();
+      }
+
+      // B) Tesseract.js OCR Worker (pouze číslice 0-9 pro čtení metru)
+      try {
+        if (window.Tesseract) {
+          const worker = await window.Tesseract.createWorker('eng', 1, {
+            logger: () => {}
+          });
+          await worker.setParameters({
+            tessedit_char_whitelist: '0123456789',
+            tessedit_pageseg_mode: '6'
+          });
+          appState.ocrWorker = worker;
+          appState.ocrReady = true;
+          updateEngineStatus();
+        }
+      } catch (_err) {
+        appState.ocrReady = false;
+        updateEngineStatus();
+      }
+    }
+
+    // =========================================================================
+    // 6. DETEKCE NEJPRAVĚJŠÍHO BODU DOPADU (PATY / PODRÁŽKY / RUKY)
+    // =========================================================================
+    /**
+     * Zpřesní souřadnici X zadní (pravé) hrany podrážky v bezprostředním okolí odhadnuté paty
+     * hledáním nejvýraznější horizontální změny kontrastu (Sobel/gradient X).
+     */
+    function refineRightmostSoleEdge(ctx, width, height, approxX, approxY) {
+      const searchLeft = Math.max(2, Math.round(approxX - width * 0.04));
+      const searchRight = Math.min(width - 3, Math.round(approxX + width * 0.045));
+      const searchTop = Math.max(2, Math.round(approxY - height * 0.025));
+      const searchBot = Math.min(height - 3, Math.round(approxY + height * 0.02));
+
+      const regionW = searchRight - searchLeft;
+      const regionH = searchBot - searchTop;
+      if (regionW <= 4 || regionH <= 4) return { x: approxX, y: approxY };
+
+      const imgData = ctx.getImageData(searchLeft, searchTop, regionW, regionH).data;
+
+      let bestScore = -1;
+      let bestX = approxX;
+      let bestY = approxY;
+
+      for (let ry = 1; ry < regionH - 1; ry++) {
+        for (let rx = 1; rx < regionW - 1; rx++) {
+          const idxLeft = (ry * regionW + (rx - 1)) * 4;
+          const idxRight = (ry * regionW + (rx + 1)) * 4;
+
+          const lumL = 0.299 * imgData[idxLeft] + 0.587 * imgData[idxLeft + 1] + 0.114 * imgData[idxLeft + 2];
+          const lumR = 0.299 * imgData[idxRight] + 0.587 * imgData[idxRight + 1] + 0.114 * imgData[idxRight + 2];
+
+          const gradX = Math.abs(lumL - lumR);
+          // Mírně preferujeme body více vpravo (nejbližší odrazu), pokud mají silnou hranu
+          const rightBias = 1 + (rx / regionW) * 0.25;
+          const score = gradX * rightBias;
+
+          if (score > bestScore && gradX > 28) {
+            bestScore = score;
+            bestX = searchLeft + rx;
+            bestY = searchTop + ry;
+          }
+        }
+      }
+
+      return { x: bestX, y: bestY };
+    }
+
+    /**
+     * Záložní detektor nejpravějšího bodu obuvi nad zónou metru, pokud v záběru
+     * není celá postava (např. záběr jen na nohy a metr).
+     */
+    function detectRightmostShoeFallback(ctx, width, height, tapeY) {
+      const topY = Math.round(height * 0.22);
+      const botY = Math.max(topY + 20, Math.round(tapeY - height * 0.06));
+      const leftX = Math.round(width * 0.08);
+      const rightX = Math.round(width * 0.92);
+      const w = rightX - leftX;
+      const h = botY - topY;
+
+      const data = ctx.getImageData(leftX, topY, w, h).data;
+
+      // Odhad pozadí podlahy z okrajových sloupců
+      let bgR = 0, bgG = 0, bgB = 0, count = 0;
+      for (let y = 0; y < h; y += 2) {
+        for (const x of [2, w - 3]) {
+          const i = (y * w + x) * 4;
+          bgR += data[i];
+          bgG += data[i + 1];
+          bgB += data[i + 2];
+          count++;
+        }
+      }
+      bgR /= count;
+      bgG /= count;
+      bgB /= count;
+
+      // Hledáme ve spodní polovině oblasti (úroveň podrážek na zemi) nejpravější pixel výrazně odlišný od podlahy
+      const contactBandTop = Math.round(h * 0.55);
+      let rightmostX = -1;
+      let contactY = topY + Math.round(h * 0.8);
+
+      for (let x = w - 4; x >= 4; x--) {
+        let verticalHits = 0;
+        let sumY = 0;
+        for (let y = contactBandTop; y < h - 2; y++) {
+          const i = (y * w + x) * 4;
+          const dist = Math.hypot(data[i] - bgR, data[i + 1] - bgG, data[i + 2] - bgB);
+          if (dist > 62) {
+            verticalHits++;
+            sumY += y;
+          }
+        }
+        // Vyžadujeme alespoň 5 souvislých pixelů, abychom vyloučili šum
+        if (verticalHits >= 5) {
+          rightmostX = leftX + x;
+          contactY = topY + Math.round(sumY / verticalHits);
+          break;
+        }
+      }
+
+      if (rightmostX === -1) {
+        rightmostX = Math.round(width * 0.52);
+        contactY = Math.round(height * 0.56);
+      }
+
+      return {
+        x: rightmostX,
+        y: contactY,
+        label: 'Nejpravější hrana obuvi'
+      };
+    }
+
+    /**
+     * Hlavní detektor nejpravějšího bodu dopadu kombinující AI PoseLandmarker
+     * (paty 29/30, špičky 31/32, kotníky 27/28, zápěstí 15/16) a přesnou hranu podrážky.
+     */
+    async function detectRightmostLandingPoint(canvas, estimatedTapeY) {
+      const width = canvas.width;
+      const height = canvas.height;
+      const ctx = canvas.getContext('2d');
+
+      if (appState.poseReady && appState.poseLandmarker) {
+        try {
+          const result = appState.poseLandmarker.detect(canvas);
+          if (result && result.landmarks && result.landmarks.length > 0) {
+            const lm = result.landmarks[0];
+
+            // Indexy dolních končetin: 27,28 kotníky; 29,30 paty; 31,32 špičky
+            const footIndices = [27, 28, 29, 30, 31, 32];
+            const validFootPoints = footIndices
+              .map(idx => ({ idx, pt: lm[idx] }))
+              .filter(item => item.pt && (item.pt.visibility ?? 1) > 0.35);
+
+            if (validFootPoints.length > 0) {
+              // Úroveň podlahy podle nejníže položeného bodu nohou (největší Y)
+              const floorYNorm = Math.max(...validFootPoints.map(f => f.pt.y));
+
+              // Kontrola, zda se ruka/zápěstí (15, 16) nedotýká země (přepad vzad)
+              const wristIndices = [15, 16];
+              const floorTouchWrists = wristIndices
+                .map(idx => ({ idx, pt: lm[idx], isWrist: true }))
+                .filter(item =>
+                  item.pt &&
+                  (item.pt.visibility ?? 1) > 0.45 &&
+                  Math.abs(item.pt.y - floorYNorm) < 0.08
+                );
+
+              const candidates = [
+                ...validFootPoints.map(f => ({ ...f, isWrist: false })),
+                ...floorTouchWrists
+              ];
+
+              // Výběr bodu nejvíce vpravo (největší souřadnice X = nejblíže odrazové čáře vpravo)
+              candidates.sort((a, b) => b.pt.x - a.pt.x);
+              const rightmost = candidates[0];
+
+              const rawX = rightmost.pt.x * width;
+              const rawY = rightmost.pt.y * height;
+
+              if (rightmost.isWrist) {
+                return {
+                  x: rawX,
+                  y: rawY,
+                  label: 'Dotyk ruky (přepad vzad)'
+                };
+              }
+
+              const refined = refineRightmostSoleEdge(ctx, width, height, rawX, rawY);
+              return {
+                x: refined.x,
+                y: refined.y,
+                label: 'Nejpravější bod paty'
+              };
+            }
+          }
+        } catch (_err) {
+          // Přechod na záložní detektor obuvi
+        }
+      }
+
+      return detectRightmostShoeFallback(ctx, width, height, estimatedTapeY);
+    }
+
+    // =========================================================================
+    // 7. DETEKCE PÁSMA A AUTOMATICKÉ PŘEČTENÍ REFERENČNÍCH ČÍSEL (OCR)
+    // =========================================================================
+    /**
+     * Najde vertikální pás s nejvyšším jasem/kontrastem v dolní polovině záběru (leží zde metr).
+     */
+    function locateTapeBandY(ctx, width, height) {
+      const startY = Math.round(height * 0.48);
+      const endY = Math.round(height * 0.94);
+      const leftX = Math.round(width * 0.15);
+      const sampleW = Math.round(width * 0.70);
+
+      const img = ctx.getImageData(leftX, startY, sampleW, endY - startY).data;
+      const rows = endY - startY;
+      const rowScores = new Float32Array(rows);
+
+      for (let r = 0; r < rows; r++) {
+        let sumLum = 0;
+        let sumHorizGrad = 0;
+        for (let c = 1; c < sampleW - 1; c += 2) {
+          const i = (r * sampleW + c) * 4;
+          const lum = 0.299 * img[i] + 0.587 * img[i + 1] + 0.114 * img[i + 2];
+          const iNext = (r * sampleW + (c + 1)) * 4;
+          const lumNext = 0.299 * img[iNext] + 0.587 * img[iNext + 1] + 0.114 * img[iNext + 2];
+          sumLum += lum;
+          sumHorizGrad += Math.abs(lum - lumNext);
+        }
+        // Pásmo je světlé a obsahuje časté svislé rysky + číslice (vysoký horizontální gradient)
+        rowScores[r] = (sumLum / (sampleW / 2)) * 0.6 + (sumHorizGrad / (sampleW / 2)) * 2.2;
+      }
+
+      // Klouzavý průměr přes výšku pásky (~6 % výšky obrazu)
+      const bandHalf = Math.max(8, Math.round(height * 0.035));
+      let bestCenter = Math.round(height * 0.74);
+      let bestScore = -1;
+
+      for (let r = bandHalf; r < rows - bandHalf; r++) {
+        let acc = 0;
+        for (let k = -bandHalf; k <= bandHalf; k++) {
+          acc += rowScores[r + k];
+        }
+        if (acc > bestScore) {
+          bestScore = acc;
+          bestCenter = startY + r;
+        }
+      }
+
+      return bestCenter;
+    }
+
+    /**
+     * Předzpracuje výřez s metrem (zvýšení kontrastu + prahování) a pomocí Tesseract.js
+     * přečte referenční čísla (např. 170, 180, 190, 200, 210, 220, 230...).
+     */
+    async function readTapeReferencePoints(sourceCanvas, tapeCenterY) {
+      const width = sourceCanvas.width;
+      const height = sourceCanvas.height;
+
+      const cropTop = Math.max(0, Math.round(tapeCenterY - height * 0.085));
+      const cropBot = Math.min(height, Math.round(tapeCenterY + height * 0.085));
+      const cropH = cropBot - cropTop;
+
+      if (!appState.ocrReady || !appState.ocrWorker || cropH < 16) {
+        return [];
+      }
+
+      // Příprava předzpracovaného plátna pro OCR (zvětšení 1.5x + vysoký kontrast)
+      const scale = 1.5;
+      const ocrCanvas = document.createElement('canvas');
+      ocrCanvas.width = Math.round(width * scale);
+      ocrCanvas.height = Math.round(cropH * scale);
+      const octx = ocrCanvas.getContext('2d');
+      octx.drawImage(sourceCanvas, 0, cropTop, width, cropH, 0, 0, ocrCanvas.width, ocrCanvas.height);
+
+      const imgData = octx.getImageData(0, 0, ocrCanvas.width, ocrCanvas.height);
+      const d = imgData.data;
+
+      // Výpočet průměrného jasu pro adaptivní kontrast
+      let sum = 0;
+      for (let i = 0; i < d.length; i += 16) {
+        sum += 0.299 * d[i] + 0.587 * d[i + 1] + 0.114 * d[i + 2];
+      }
+      const avgLum = sum / (d.length / 16);
+      const threshold = Math.max(95, Math.min(185, avgLum * 0.88));
+
+      for (let i = 0; i < d.length; i += 4) {
+        const lum = 0.299 * d[i] + 0.587 * d[i + 1] + 0.114 * d[i + 2];
+        const bin = lum < threshold ? 0 : 255;
+        d[i] = d[i + 1] = d[i + 2] = bin;
+      }
+      octx.putImageData(imgData, 0, 0);
+
+      try {
+        const { data } = await appState.ocrWorker.recognize(ocrCanvas);
+        // Okamžité uvolnění dočasného OCR plátna
+        ocrCanvas.width = 0;
+        ocrCanvas.height = 0;
+
+        if (!data || !data.words) return [];
+
+        const candidates = [];
+        for (const w of data.words) {
+          const clean = (w.text || '').replace(/\D/g, '');
+          if (clean.length < 2 || clean.length > 3) continue;
+          const val = parseInt(clean, 10);
+
+          // Platné hodnoty pro skok z místa (60 cm až 360 cm)
+          if (val >= 60 && val <= 360 && (w.confidence ?? 0) >= 45) {
+            const cx = ((w.bbox.x0 + w.bbox.x1) / 2) / scale;
+            const cy = cropTop + ((w.bbox.y0 + w.bbox.y1) / 2) / scale;
+            candidates.push({
+              cm: val,
+              x: cx,
+              y: cy,
+              confidence: w.confidence
+            });
+          }
+        }
+
+        // Odfiltrování konzistentní dvojice/řady (hodnoty rostou zprava doleva: vyšší cm = menší X)
+        if (candidates.length < 2) return candidates;
+
+        let bestInliers = [];
+        for (let i = 0; i < candidates.length; i++) {
+          for (let j = i + 1; j < candidates.length; j++) {
+            const a = candidates[i];
+            const b = candidates[j];
+            if (a.cm === b.cm || Math.abs(a.x - b.x) < width * 0.05) continue;
+
+            // Ověření, že čísla rostou zprava doleva (menší X má větší cm)
+            const dx = b.x - a.x;
+            const dCm = b.cm - a.cm;
+            if ((dx < 0 && dCm <= 0) || (dx > 0 && dCm >= 0)) continue;
+
+            const pxPerCm = Math.abs(dx / dCm);
+            // Realistické měřítko v záběru (cca 2 až 45 px na 1 cm)
+            if (pxPerCm < 2 || pxPerCm > 45) continue;
+
+            const slope = (b.y - a.y) / (b.x - a.x);
+            const inliers = candidates.filter(c => {
+              const expectedX = a.x + (c.cm - a.cm) * (dx / dCm);
+              const expectedY = a.y + slope * (c.x - a.x);
+              return Math.abs(c.x - expectedX) < pxPerCm * 3.2 && Math.abs(c.y - expectedY) < height * 0.05;
+            });
+
+            if (inliers.length > bestInliers.length) {
+              bestInliers = inliers;
+            }
+          }
+        }
+
+        return bestInliers.length >= 2 ? bestInliers.sort((a, b) => b.x - a.x) : candidates.slice(0, 1);
+      } catch (_err) {
+        ocrCanvas.width = 0;
+        ocrCanvas.height = 0;
+        return [];
+      }
+    }
+
+    // =========================================================================
+    // 8. PERSPEKTIVNÍ PROJEKCE DOPADU NA METR
+    // =========================================================================
+    /**
+     * Proloží referenční body metru přímkou, spustí z nejpravějšího bodu paty kolmici
+     * korigovanou o sklon mobilu z výšky pasu a vypočítá přesný výkon v centimetrech.
+     */
+    function computePerspectiveJumpDistance(width, height, landingPt, tapeMarks, tapeCenterY, pitchDeg) {
+      let lineP1, lineP2, cm1, cm2, methodLabel, isFallback = false, fallbackNote = '';
+
+      if (tapeMarks.length >= 2) {
+        // Lineární regrese přes všechny validní referenční značky metru
+        const n = tapeMarks.length;
+        let sumX = 0, sumY = 0, sumXX = 0, sumXY = 0;
+        for (const m of tapeMarks) {
+          sumX += m.x;
+          sumY += m.y;
+          sumXX += m.x * m.x;
+          sumXY += m.x * m.y;
+        }
+        const denom = n * sumXX - sumX * sumX;
+        const slope = Math.abs(denom) > 1e-4 ? (n * sumXY - sumX * sumY) / denom : 0;
+        const intercept = (sumY - slope * sumX) / n;
+
+        const first = tapeMarks[0]; // nejpravější značka (nižší cm)
+        const last = tapeMarks[tapeMarks.length - 1]; // nejlevější značka (vyšší cm)
+
+        lineP1 = { x: first.x, y: slope * first.x + intercept };
+        lineP2 = { x: last.x, y: slope * last.x + intercept };
+        cm1 = first.cm;
+        cm2 = last.cm;
+        methodLabel = 'OCR metru + Perspektiva';
+      } else {
+        // Záložní geometrický model ze sklonu mobilu (DeviceOrientation) při nedostatečném osvětlení metru
+        const pitchRad = (pitchDeg * Math.PI) / 180;
+        const assumedWaistHeightCm = 115; // Typická výška držení mobilu nad pasem
+        const slantDistCm = assumedWaistHeightCm / Math.max(0.25, Math.sin(pitchRad));
+        const horizontalFovRad = (62 * Math.PI) / 180;
+        const visibleSpanCm = 2 * slantDistCm * Math.tan(horizontalFovRad / 2);
+        const estPxPerCm = (width * 0.88) / Math.max(40, visibleSpanCm);
+
+        if (tapeMarks.length === 1) {
+          const anchor = tapeMarks[0];
+          lineP1 = { x: anchor.x, y: anchor.y };
+          lineP2 = { x: anchor.x - estPxPerCm * 40, y: anchor.y };
+          cm1 = anchor.cm;
+          cm2 = anchor.cm + 40;
+          methodLabel = '1 značka OCR + Sklon mobilu';
+          isFallback = true;
+          fallbackNote = `Na metru bylo čitelné jen číslo ${anchor.cm} cm – měřítko doplněno ze sklonu telefonu (${Math.round(pitchDeg)}°).`;
+        } else {
+          // Žádné číslo se nepodařilo přečíst – odhad se středem záběru na 200 cm
+          lineP1 = { x: width * 0.85, y: tapeCenterY };
+          lineP2 = { x: width * 0.15, y: tapeCenterY };
+          const span = (lineP1.x - lineP2.x) / estPxPerCm;
+          cm1 = Math.round(200 - span / 2);
+          cm2 = Math.round(200 + span / 2);
+          methodLabel = 'Odhad ze sklonu senzoru';
+          isFallback = true;
+          fallbackNote = `Čísla na metru nebyla dostatečně ostrá – vzdálenost byla odhadnuta ze sklonu telefonu (${Math.round(pitchDeg)}°). Pro přesnost na 1 cm přibližte metr do spodní zóny.`;
+        }
+      }
+
+      // Jednotkový směrový vektor podél metru (směrem k vyšším hodnotám / doleva)
+      const vx = lineP2.x - lineP1.x;
+      const vy = lineP2.y - lineP1.y;
+      const segLen = Math.hypot(vx, vy) || 1;
+      const ux = vx / segLen;
+      const uy = vy / segLen;
+
+      // Perspektivní korekce bočního odstupu žáka od metru při pohledu z výšky pasu:
+      // 1) Úběžník podlahy (vzdálenější body nahoře v obrazu jsou perspektivně zúžené)
+      const pitchRad = (pitchDeg * Math.PI) / 180;
+      const focalPx = height * 0.85;
+      const horizonY = height * 0.5 - focalPx * Math.tan(pitchRad);
+      const yTapeRef = (lineP1.y + lineP2.y) * 0.5;
+      const depthRatio = Math.max(0.75, Math.min(1.25,
+        (yTapeRef - horizonY) / Math.max(40, landingPt.y - horizonY)
+      ));
+
+      // 2) Korekce sbíhavosti svislic směrem ke středu obrazu (paralaxa z výšky pasu)
+      const dyFromTape = landingPt.y - yTapeRef;
+      const lateralTiltCorrection = ((landingPt.x - width * 0.5) / width) * dyFromTape * Math.cos(pitchRad) * 0.35;
+
+      // Projekce bodu dopadu na přímku metru
+      const dx = (landingPt.x + lateralTiltCorrection) - lineP1.x;
+      const dy = landingPt.y - lineP1.y;
+      const projDistPx = (dx * ux + dy * uy) * depthRatio;
+
+      // Průsečík kolmice na přímce metru (pro vizuální vykreslení)
+      const rawProjPx = dx * ux + dy * uy;
+      const footOnTape = {
+        x: lineP1.x + ux * rawProjPx,
+        y: lineP1.y + uy * rawProjPx
+      };
+
+      const cmPerPx = (cm2 - cm1) / segLen;
+      const measuredCm = Math.round(cm1 + projDistPx * cmPerPx);
+
+      return {
+        measuredCm,
+        lineP1,
+        lineP2,
+        cm1,
+        cm2,
+        footOnTape,
+        methodLabel,
+        isFallback,
+        fallbackNote
+      };
+    }
+
+    // =========================================================================
+    // 9. VYKRESLENÍ ANOTOVANÉHO VÝSLEDKU V RAM
+    // =========================================================================
+    function drawAnnotatedResult(sourceCanvas, targetCanvas, landingPt, tapeMarks, geo) {
+      const w = sourceCanvas.width;
+      const h = sourceCanvas.height;
+      targetCanvas.width = w;
+      targetCanvas.height = h;
+
+      const ctx = targetCanvas.getContext('2d');
+      ctx.drawImage(sourceCanvas, 0, 0);
+
+      // Jemné ztmavení pro maximální čitelnost měřicích čar
+      ctx.fillStyle = 'rgba(2, 6, 23, 0.18)';
+      ctx.fillRect(0, 0, w, h);
+
+      const scaleUnit = Math.max(1, w / 420);
+
+      // 1. Přímka metru (prodloužená přes šířku záběru)
+      const ux = (geo.lineP2.x - geo.lineP1.x) / (Math.hypot(geo.lineP2.x - geo.lineP1.x, geo.lineP2.y - geo.lineP1.y) || 1);
+      const uy = (geo.lineP2.y - geo.lineP1.y) / (Math.hypot(geo.lineP2.x - geo.lineP1.x, geo.lineP2.y - geo.lineP1.y) || 1);
+
+      ctx.save();
+      ctx.strokeStyle = '#10b981';
+      ctx.lineWidth = 3.5 * scaleUnit;
+      ctx.shadowColor = 'rgba(16, 185, 129, 0.7)';
+      ctx.shadowBlur = 10 * scaleUnit;
+      ctx.beginPath();
+      ctx.moveTo(geo.lineP1.x - ux * w * 0.3, geo.lineP1.y - uy * w * 0.3);
+      ctx.lineTo(geo.lineP2.x + ux * w * 0.3, geo.lineP2.y + uy * w * 0.3);
+      ctx.stroke();
+      ctx.restore();
+
+      // 2. Zelené značky referenčních bodů přečtených z metru
+      const marksToDraw = tapeMarks.length >= 2
+        ? tapeMarks
+        : [
+            { x: geo.lineP1.x, y: geo.lineP1.y, cm: Math.round(geo.cm1) },
+            { x: geo.lineP2.x, y: geo.lineP2.y, cm: Math.round(geo.cm2) }
+          ];
+
+      for (const m of marksToDraw) {
+        ctx.fillStyle = '#10b981';
+        ctx.beginPath();
+        ctx.arc(m.x, m.y, 6.5 * scaleUnit, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.strokeStyle = '#020617';
+        ctx.lineWidth = 2 * scaleUnit;
+        ctx.stroke();
+
+        // Štítek s hodnotou pod bodem
+        const label = `${m.cm}`;
+        ctx.font = `800 ${Math.round(13 * scaleUnit)}px "JetBrains Mono", monospace`;
+        const textW = ctx.measureText(label).width + 12 * scaleUnit;
+        const boxH = 20 * scaleUnit;
+        const boxY = m.y + 11 * scaleUnit;
+
+        ctx.fillStyle = 'rgba(2, 6, 23, 0.88)';
+        ctx.beginPath();
+        ctx.roundRect(m.x - textW / 2, boxY, textW, boxH, 6 * scaleUnit);
+        ctx.fill();
+        ctx.strokeStyle = '#10b981';
+        ctx.lineWidth = 1.5 * scaleUnit;
+        ctx.stroke();
+
+        ctx.fillStyle = '#6ee7b7';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(label, m.x, boxY + boxH / 2);
+      }
+
+      // 3. Červená kolmice dopadu z nejpravějšího bodu paty na metr
+      ctx.save();
+      ctx.strokeStyle = '#f43f5e';
+      ctx.lineWidth = 3.5 * scaleUnit;
+      ctx.setLineDash([8 * scaleUnit, 6 * scaleUnit]);
+      ctx.beginPath();
+      ctx.moveTo(landingPt.x, landingPt.y);
+      ctx.lineTo(geo.footOnTape.x, geo.footOnTape.y);
+      ctx.stroke();
+      ctx.restore();
+
+      // Bod dopadu na přímce metru
+      ctx.fillStyle = '#f43f5e';
+      ctx.beginPath();
+      ctx.arc(geo.footOnTape.x, geo.footOnTape.y, 7 * scaleUnit, 0, Math.PI * 2);
+      ctx.fill();
+
+      // 4. Zaměřovač na nejpravějším bodě paty
+      ctx.save();
+      ctx.strokeStyle = '#f43f5e';
+      ctx.lineWidth = 3 * scaleUnit;
+      ctx.beginPath();
+      ctx.arc(landingPt.x, landingPt.y, 15 * scaleUnit, 0, Math.PI * 2);
+      ctx.stroke();
+
+      ctx.fillStyle = '#ffe4e6';
+      ctx.beginPath();
+      ctx.arc(landingPt.x, landingPt.y, 5 * scaleUnit, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Popisek nejpravějšího bodu
+      const tagText = `${landingPt.label}: ${geo.measuredCm} cm`;
+      ctx.font = `800 ${Math.round(13 * scaleUnit)}px "Inter", sans-serif`;
+      const tagW = ctx.measureText(tagText).width + 18 * scaleUnit;
+      const tagH = 26 * scaleUnit;
+      const tagX = Math.max(10, Math.min(w - tagW - 10, landingPt.x - tagW * 0.65));
+      const tagY = Math.max(12, landingPt.y - 44 * scaleUnit);
+
+      ctx.fillStyle = '#e11d48';
+      ctx.beginPath();
+      ctx.roundRect(tagX, tagY, tagW, tagH, 8 * scaleUnit);
+      ctx.fill();
+
+      ctx.fillStyle = '#ffffff';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(tagText, tagX + tagW / 2, tagY + tagH / 2);
+      ctx.restore();
+    }
+
+    // =========================================================================
+    // 10. HLAVNÍ AKCE: „ZMĚŘIT VÝKON“ A „SMAZAT SNÍMEK A MĚŘIT DALŠÍHO“
+    // =========================================================================
+    async function handleMeasurePerformance() {
+      if (appState.isBusy) return;
+      appState.isBusy = true;
+
+      // 1. Vyžádání oprávnění senzoru náklonu (iOS vyžaduje přímo v kliknutí)
+      await ensureOrientationPermissionOnClick();
+
+      processingStepText.textContent = 'Zachycuji snímek pouze do RAM...';
+      processingOverlay.classList.remove('hidden');
+
+      // Krátký snímek pro překreslení UI před výpočtem
+      await new Promise(r => requestAnimationFrame(r));
+
+      try {
+        // 2. Zachycení snímku v plném rozlišení do skrytého canvasu v RAM
+        const wctx = ramWorkCanvas.getContext('2d');
+        if (appState.isSimMode) {
+          ramWorkCanvas.width = simPreviewCanvas.width;
+          ramWorkCanvas.height = simPreviewCanvas.height;
+          wctx.drawImage(simPreviewCanvas, 0, 0);
+        } else if (cameraVideo.videoWidth > 0 && cameraVideo.videoHeight > 0) {
+          ramWorkCanvas.width = cameraVideo.videoWidth;
+          ramWorkCanvas.height = cameraVideo.videoHeight;
+          wctx.drawImage(cameraVideo, 0, 0, ramWorkCanvas.width, ramWorkCanvas.height);
+        } else {
+          // Pokud kamera nebyla spuštěna, aktivujeme testovací scénu
+          activateSimulationMode();
+          ramWorkCanvas.width = simPreviewCanvas.width;
+          ramWorkCanvas.height = simPreviewCanvas.height;
+          wctx.drawImage(simPreviewCanvas, 0, 0);
+        }
+
+        // 3. Nalezení pruhu metru a detekce nejpravějšího bodu dopadu
+        processingStepText.textContent = 'Detekuji nejpravější bod dopadu...';
+        const tapeCenterY = locateTapeBandY(wctx, ramWorkCanvas.width, ramWorkCanvas.height);
+        const landingPt = await detectRightmostLandingPoint(ramWorkCanvas, tapeCenterY);
+
+        // 4. Přečtení referenčních bodů z metru pomocí OCR
+        processingStepText.textContent = 'Čtu referenční body z metru (OCR)...';
+        const tapeMarks = await readTapeReferencePoints(ramWorkCanvas, tapeCenterY);
+
+        // 5. Perspektivní projekce na metr korigovaná o sklon telefonu
+        processingStepText.textContent = 'Počítám perspektivní projekci...';
+        const geo = computePerspectiveJumpDistance(
+          ramWorkCanvas.width,
+          ramWorkCanvas.height,
+          landingPt,
+          tapeMarks,
+          tapeCenterY,
+          appState.orientation.beta
+        );
+
+        // 6. Vykreslení výsledku do výsledkového plátna v RAM
+        drawAnnotatedResult(ramWorkCanvas, resultCanvas, landingPt, tapeMarks, geo);
+
+        // Okamžité uvolnění pracovního plátna (zůstává jen zobrazený náhled v RAM)
+        ramWorkCanvas.width = 0;
+        ramWorkCanvas.height = 0;
+
+        // Aktualizace textových údajů výsledku
+        scoreValueText.textContent = String(geo.measuredCm);
+        confidenceBadge.textContent = geo.methodLabel;
+        confidenceBadge.className = geo.isFallback
+          ? 'inline-block px-2.5 py-1 rounded-lg text-[11px] font-bold bg-amber-500/15 text-amber-300 border border-amber-500/30'
+          : 'inline-block px-2.5 py-1 rounded-lg text-[11px] font-bold bg-emerald-500/15 text-emerald-300 border border-emerald-500/30';
+
+        const refRange = tapeMarks.length >= 2
+          ? `${tapeMarks[0].cm}–${tapeMarks[tapeMarks.length - 1].cm} cm`
+          : `${Math.round(geo.cm1)}–${Math.round(geo.cm2)} cm`;
+        detailSubtext.textContent = `Ref: ${refRange} • Náklon ${Math.round(appState.orientation.beta)}°`;
+
+        if (geo.isFallback && geo.fallbackNote) {
+          fallbackNoticeText.textContent = geo.fallbackNote;
+          fallbackNoticeText.classList.remove('hidden');
+        } else {
+          fallbackNoticeText.classList.add('hidden');
+        }
+
+        // Přepnutí zobrazení na výsledek
+        processingOverlay.classList.add('hidden');
+        cameraView.classList.add('hidden');
+        resultView.classList.remove('hidden');
+
+        measureBtn.classList.add('hidden');
+        resetDeleteBtn.classList.remove('hidden');
+      } catch (err) {
+        processingOverlay.classList.add('hidden');
+        ramWorkCanvas.width = 0;
+        ramWorkCanvas.height = 0;
+        showToast('Chyba při vyhodnocení snímku – zkuste prosím znovu');
+      } finally {
+        appState.isBusy = false;
+      }
+    }
+
+    /**
+     * Okamžitě a nevratně vynuluje všechna plátna v RAM a vrátí aplikaci do hledáčku kamery.
+     */
+    function handlePurgeAndReset() {
+      // Vynulování rozměrů pláten uvolní pixelové buffery z operační paměti
+      const rctx = resultCanvas.getContext('2d');
+      if (rctx && resultCanvas.width > 0 && resultCanvas.height > 0) {
+        rctx.clearRect(0, 0, resultCanvas.width, resultCanvas.height);
+      }
+      resultCanvas.width = 0;
+      resultCanvas.height = 0;
+
+      ramWorkCanvas.width = 0;
+      ramWorkCanvas.height = 0;
+
+      // V testovacím režimu připravíme pro další pokus nový realistický skok (182–232 cm)
+      if (appState.isSimMode) {
+        appState.simTargetCm = Math.floor(182 + Math.random() * 50);
+      }
+
+      // Návrat do živého hledáčku s jediným tlačítkem „Změřit výkon“
+      resultView.classList.add('hidden');
+      cameraView.classList.remove('hidden');
+
+      resetDeleteBtn.classList.add('hidden');
+      measureBtn.classList.remove('hidden');
+
+      showToast('Snímek smazán z RAM • Připraveno');
+    }
+
+    measureBtn.addEventListener('click', handleMeasurePerformance);
+    resetDeleteBtn.addEventListener('click', handlePurgeAndReset);
+
+    // =========================================================================
+    // 11. SPUŠTĚNÍ APLIKACE PO NAČTENÍ STRÁNKY
+    // =========================================================================
+    window.addEventListener('load', () => {
+      initOrientationPassive();
+      startCamera();
+      initAiEngines();
+    });
+  </script>
+</body>
+</html>
